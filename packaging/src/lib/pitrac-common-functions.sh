@@ -727,16 +727,12 @@ install_dependencies_from_apt() {
     # ========================================================================
     # PiTrac custom dependency packages (from pitraclm.github.io/packages)
     # ========================================================================
-    # Comment out a line to skip installing that package from the PiTrac repo
-    # and use the system version instead (if available). Useful for testing
-    # whether a system-provided package works as a drop-in replacement.
-    #
-    # Example: To test with system lgpio instead of custom, comment out
-    # the liblgpio1 and liblgpio-dev lines below, then run a fresh build.
+    # lgpio is NOT here — system liblgpio1 is used instead.
+    # python3-lgpio/python3-rpi-lgpio depend on the RPi Foundation version
+    # and break if a custom build with a different version string is installed.
+    # liblgpio-dev is in the system deps block in build.sh.
     # ========================================================================
     local packages=(
-        "liblgpio1"               # GPIO library
-        "liblgpio-dev"            # GPIO development headers
         "libmsgpack-cxx-dev"      # MessagePack C++ (header-only)
         "libactivemq-cpp"         # ActiveMQ C++ client runtime
         "libactivemq-cpp-dev"     # ActiveMQ C++ client headers
