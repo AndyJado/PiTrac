@@ -223,7 +223,7 @@ public:
     // Spin prediction model configuration
     static std::string kSpinModelPath;     // Spin model directory (NCNN format)
     static bool kSpinModelEnabled;         // Use ML spin prediction vs brute-force search
-    static int kSpinCropSize;              // Input crop size (must match training, default 64)
+    static int kSpinCropSize;              // Input crop size — must match Python training pipeline (default 128)
 
     // This determines which potential 3D angles will be searched for spin processing
     struct RotationSearchSpace {

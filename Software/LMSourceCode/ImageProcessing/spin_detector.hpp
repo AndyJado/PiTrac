@@ -30,7 +30,7 @@ public:
     struct Config {
         std::string param_path;         // NCNN .param file
         std::string bin_path;           // NCNN .bin file
-        int crop_size = 64;             // Expected input crop size (must match training)
+        int crop_size = 128;            // Expected input crop size (must match training)
         int num_threads = 3;            // Inference threads
         bool use_fp16_packing = true;   // ARM FP16 optimization
     };

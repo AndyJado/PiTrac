@@ -237,7 +237,7 @@ namespace golf_sim {
     std::string BallImageProc::kSpinModelPath = "../ml_models/spin-predictor";
     #endif
     bool BallImageProc::kSpinModelEnabled = false;
-    int BallImageProc::kSpinCropSize = 64;
+    int BallImageProc::kSpinCropSize = 128;
     std::unique_ptr<SpinDetector> BallImageProc::spin_detector_;
     std::atomic<bool> BallImageProc::spin_detector_initialized_{false};
     std::mutex BallImageProc::spin_detector_mutex_;
@@ -454,6 +454,10 @@ namespace golf_sim {
 
             if (std::filesystem::exists(spin_config.param_path) &&
                 std::filesystem::exists(spin_config.bin_path)) {
+                // Hold the mutex so the lazy-init path in PredictSpinWithModel
+                // cannot race with this preload (it checks spin_detector_ outside
+                // the lock via the atomic flag).
+                std::lock_guard<std::mutex> lock(spin_detector_mutex_);
                 spin_detector_ = std::make_unique<SpinDetector>(spin_config);
                 if (spin_detector_->Initialize()) {
                     spin_detector_->WarmUp(3);
@@ -4878,6 +4882,14 @@ namespace golf_sim {
         if (crop1.empty() || crop2.empty()) {
             GS_LOG_MSG(warning, "Failed to isolate ball crops for spin prediction");
             return zero_result;
+        }
+
+        // Normalize crop sizes: resize the smaller crop UP to match the larger one,
+        // same logic as the brute-force path in GetBallRotation (lines ~2972-2983)
+        if (crop1.rows > crop2.rows || crop1.cols > crop2.cols) {
+            cv::resize(crop2, crop2, cv::Size(crop1.cols, crop1.rows), cv::INTER_LINEAR);
+        } else if (crop2.rows > crop1.rows || crop2.cols > crop1.cols) {
+            cv::resize(crop1, crop1, cv::Size(crop2.cols, crop2.rows), cv::INTER_LINEAR);
         }
 
         // Run ML inference

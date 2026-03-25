@@ -49,8 +49,12 @@ void SpinDetector::PreprocessCrop(const cv::Mat& crop, ncnn::Mat& out) {
     if (crop.channels() == 3) {
         cv::cvtColor(crop, gray, cv::COLOR_BGR2GRAY);
     } else {
-        gray = crop;
+        gray = crop.clone();
     }
+
+    // Match the histogram equalization applied by IsolateBall() and the Python
+    // training pipeline — the model was trained on equalized crops.
+    cv::equalizeHist(gray, gray);
 
     // Resize to expected input size
     cv::Mat resized;
