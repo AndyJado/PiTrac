@@ -202,8 +202,8 @@ namespace golf_sim {
     int BallImageProc::kGaborMinWhitePercent = 38; // Nominal 40;
 
     // Model Detection Configuration
-    std::string BallImageProc::kStrobedBallDetectionMethod = "experimental";
-    std::string BallImageProc::kBallPlacementDetectionMethod = "experimental";
+    std::string BallImageProc::kStrobedBallDetectionMethod = "yolo";
+    std::string BallImageProc::kBallPlacementDetectionMethod = "yolo";
     #ifdef _WIN32
     std::string BallImageProc::kModelPath = "../../Software/LMSourceCode/ml_models/yolo26-ball-detector";
     #else
@@ -400,9 +400,9 @@ namespace golf_sim {
 
         GolfSimConfiguration::SetConstant("gs_config.logging.kLogIntermediateSpinImagesToFile", kLogIntermediateSpinImagesToFile);
         
-        // Preload model at startup if using experimental detection for either ball placement or flight
-        if (kStrobedBallDetectionMethod == "experimental" ||
-            kBallPlacementDetectionMethod == "experimental") {
+        // Preload model at startup if using YOLO detection for either ball placement or flight
+        if (IsYoloMethod(kStrobedBallDetectionMethod) ||
+            IsYoloMethod(kBallPlacementDetectionMethod)) {
             GS_LOG_MSG(info, "Detection method is '" + kStrobedBallDetectionMethod + "' / Placement method is '" + kBallPlacementDetectionMethod + "', preloading YOLO model at startup...");
 
             if (kInferenceBackend == "ncnn") {
@@ -614,7 +614,7 @@ namespace golf_sim {
         GS_LOG_TRACE_MSG(trace, "Using detection method: " + detection_method);
 
         // *** ML DETECTION - Route through backend dispatcher (ncnn, onnxruntime, or opencv dnn) ***
-        if (detection_method == "experimental") {
+        if (IsYoloMethod(detection_method)) {
             std::vector<GsCircle> detected_circles;
             if (DetectBalls(rgbImg, search_mode, detected_circles, report_find_failures)) {
                 // Convert GsCircle results to GolfBall objects for trajectory analysis
@@ -1132,7 +1132,7 @@ namespace golf_sim {
         }
 
         // NEW: ONNX detection bypass - skip adaptive parameter tuning for ONNX
-        if (detection_method == "experimental") {
+        if (IsYoloMethod(detection_method)) {
             GS_LOG_TRACE_MSG(trace, "Using ONNX detection - bypassing adaptive parameter tuning");
             
             std::vector<GsCircle> test_circles;
@@ -1571,7 +1571,7 @@ namespace golf_sim {
             std::string detection_method = (search_mode == BallSearchMode::kFindPlacedBall) ? kBallPlacementDetectionMethod : kStrobedBallDetectionMethod;
 
             // Specially mark the color of the ball to allow downstream stages to effectively ignore color-related filtering.
-            if (detection_method == "experimental") {
+            if (IsYoloMethod(detection_method)) {
                 b.ball_color_ = GolfBall::BallColor::kModelDetected; // Mark as ONNX-detected
             }
 
@@ -4165,7 +4165,7 @@ namespace golf_sim {
         
         if (detection_method == "legacy") {
             return DetectBallsHoughCircles(preprocessed_img, search_mode, detected_circles);
-        } else if (detection_method == "experimental") {
+        } else if (IsYoloMethod(detection_method)) {
             if (kInferenceBackend == "ncnn") {
                 if (DetectBallsNCNN(preprocessed_img, search_mode, detected_circles, report_find_failures)) {
                     return true;

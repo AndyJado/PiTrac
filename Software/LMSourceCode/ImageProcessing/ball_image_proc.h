@@ -203,6 +203,11 @@ public:
     // Model Detection Configuration
     static std::string kStrobedBallDetectionMethod;
     static std::string kBallPlacementDetectionMethod;
+
+    // Returns true if method string indicates YOLO detection (accepts "yolo" or legacy "experimental")
+    static bool IsYoloMethod(const std::string& method) {
+        return method == "yolo" || method == "experimental";
+    }
     static std::string kModelPath;          // Model directory — backend appends file names
     static float kModelConfidenceThreshold;
     static float kModelNMSThreshold;

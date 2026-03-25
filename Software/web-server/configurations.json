@@ -572,10 +572,10 @@
       "description": "Algorithm for detecting strobed balls in flight",
       "type": "select",
       "options": {
-        "legacy": "HoughCircles (Legacy)",
-        "experimental": "YOLO Neural Network"
+        "yolo": "YOLO Neural Network (Recommended)",
+        "legacy": "HoughCircles (Legacy Fallback)"
       },
-      "default": "experimental",
+      "default": "yolo",
       "requiresRestart": true,
       "passedVia": "json",
       "passedTo": "both"
@@ -588,10 +588,10 @@
       "description": "Algorithm for detecting ball placement on tee",
       "type": "select",
       "options": {
-        "legacy": "HoughCircles (GetCalibratedBall process)",
-        "experimental": "YOLO (Fast & Accurate)"
+        "yolo": "YOLO (Recommended)",
+        "legacy": "HoughCircles (Legacy Fallback)"
       },
-      "default": "experimental",
+      "default": "yolo",
       "requiresRestart": true,
       "passedVia": "json",
       "passedTo": "both"
@@ -610,9 +610,7 @@
       "passedTo": "both"
     },
     "gs_config.ball_identification.kImageTypeToProcessWithYOLO": {
-      "category": "Ball Detection",
-      "subcategory": "advanced",
-      "basicSubcategory": "Detection Methods",
+      "category": "AI Detection",
       "displayName": "Image Type To Use In YOLO Processing",
       "description": "Image Type To Use In YOLO Processing (color/mono)",
       "type": "select",
@@ -623,7 +621,8 @@
       "default": "0",
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.cameras.kCamera1Gain": {
       "category": "Cameras",
@@ -1078,7 +1077,6 @@
     },
     "gs_config.ball_identification.kModelNMSThreshold": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Model NMS Threshold",
       "description": "Non-Maximum Suppression threshold for overlapping detections",
       "type": "number",
@@ -1088,13 +1086,13 @@
       "default": 0.4,
       "requiresRestart": false,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kModelInputWidth": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Model Input Width",
-      "description": "Neural network input width in pixels (must match exported model, multiple of 32)",
+      "description": "Neural network input width in pixels (must match exported model)",
       "type": "number",
       "min": 320,
       "max": 2048,
@@ -1102,13 +1100,13 @@
       "default": 736,
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kModelInputHeight": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Model Input Height",
-      "description": "Neural network input height in pixels (must match exported model, multiple of 32)",
+      "description": "Neural network input height in pixels (must match exported model)",
       "type": "number",
       "min": 320,
       "max": 2048,
@@ -1116,38 +1114,38 @@
       "default": 544,
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kInferenceBackend": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Inference Backend",
       "description": "Neural network inference backend",
       "type": "select",
       "options": {
         "ncnn": "NCNN (Fastest on Pi 5)",
-        "onnxruntime": "ONNX Runtime (Legacy)",
+        "onnxruntime": "ONNX Runtime",
         "opencv_dnn": "OpenCV DNN (Fallback)"
       },
       "default": "ncnn",
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kAutoFallback": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Auto Fallback to OpenCV",
       "description": "Automatically fallback to OpenCV DNN if primary backend fails",
       "type": "boolean",
       "default": true,
       "requiresRestart": false,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kInferenceThreads": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "Inference Threads",
       "description": "Number of threads for inference (0 = auto)",
       "type": "number",
@@ -1157,11 +1155,11 @@
       "default": 3,
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kModelDeviceType": {
       "category": "AI Detection",
-      "subcategory": "advanced",
       "displayName": "ONNX Device Type",
       "description": "Device type for ONNX inference (CPU/GPU)",
       "type": "select",
@@ -1172,7 +1170,8 @@
       "default": "CPU",
       "requiresRestart": true,
       "passedVia": "json",
-      "passedTo": "both"
+      "passedTo": "both",
+      "internal": true
     },
     "gs_config.ball_identification.kStrobedBallsCannyLower": {
       "category": "Ball Detection",

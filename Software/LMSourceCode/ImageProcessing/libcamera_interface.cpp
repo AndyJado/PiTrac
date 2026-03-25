@@ -1297,7 +1297,7 @@ bool TakeRawPicture(const GolfSimCamera& camera, cv::Mat& img) {
 
 // Enhanced ball detection using YOLO when configured
 bool CheckForBallEnhanced(GolfBall& ball, cv::Mat& img) {
-    bool use_yolo = (golf_sim::BallImageProc::kBallPlacementDetectionMethod == "experimental");
+    bool use_yolo = golf_sim::BallImageProc::IsYoloMethod(golf_sim::BallImageProc::kBallPlacementDetectionMethod);
     
     GsCameraNumber camera_number = GolfSimOptions::GetCommandLineOptions().GetCameraNumber();
     const CameraHardware::CameraModel camera_model = (camera_number == GsCameraNumber::kGsCamera1) ? 
