@@ -198,6 +198,7 @@ pitrac_lm_sources += ([
 			'libcamera_jpeg.cpp',
 			'ball_image_proc.cpp',
 			'ncnn_detector.cpp',
+			'spin_detector.cpp',
 			'onnx_runtime_detector.cpp',
 			'pulse_strobe.cpp',
 			'colorsys.cpp',

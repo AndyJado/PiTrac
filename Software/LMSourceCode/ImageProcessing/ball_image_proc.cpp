@@ -230,6 +230,18 @@ namespace golf_sim {
     std::mutex BallImageProc::onnx_detector_mutex_;
 #endif
 
+    // Spin prediction model — sits alongside the YOLO model in ml_models/
+    #ifdef _WIN32
+    std::string BallImageProc::kSpinModelPath = "../../Software/LMSourceCode/ml_models/spin-predictor";
+    #else
+    std::string BallImageProc::kSpinModelPath = "../ml_models/spin-predictor";
+    #endif
+    bool BallImageProc::kSpinModelEnabled = false;
+    int BallImageProc::kSpinCropSize = 64;
+    std::unique_ptr<SpinDetector> BallImageProc::spin_detector_;
+    std::atomic<bool> BallImageProc::spin_detector_initialized_{false};
+    std::mutex BallImageProc::spin_detector_mutex_;
+
     cv::dnn::Net BallImageProc::yolo_model_;
     bool BallImageProc::yolo_model_loaded_ = false;
     std::mutex BallImageProc::yolo_model_mutex_;
@@ -427,6 +439,32 @@ namespace golf_sim {
 #endif
             else {
                 PreloadYOLOModel();
+            }
+        }
+
+        // Preload spin prediction model if enabled
+        if (kSpinModelEnabled && !kSpinModelPath.empty()) {
+            GS_LOG_MSG(info, "Preloading spin prediction model from: " + kSpinModelPath);
+
+            SpinDetector::Config spin_config;
+            spin_config.param_path = kSpinModelPath + "/best.ncnn.param";
+            spin_config.bin_path = kSpinModelPath + "/best.ncnn.bin";
+            spin_config.crop_size = kSpinCropSize;
+            spin_config.num_threads = kInferenceThreads;
+
+            if (std::filesystem::exists(spin_config.param_path) &&
+                std::filesystem::exists(spin_config.bin_path)) {
+                spin_detector_ = std::make_unique<SpinDetector>(spin_config);
+                if (spin_detector_->Initialize()) {
+                    spin_detector_->WarmUp(3);
+                    spin_detector_initialized_.store(true, std::memory_order_release);
+                    GS_LOG_MSG(info, "Spin prediction model preloaded — first spin detection will be fast");
+                } else {
+                    GS_LOG_MSG(warning, "Failed to initialize spin prediction model — will use brute-force fallback");
+                    spin_detector_.reset();
+                }
+            } else {
+                GS_LOG_MSG(warning, "Spin model files not found at: " + kSpinModelPath + " — will use brute-force fallback");
             }
         }
     }
@@ -2889,8 +2927,21 @@ namespace golf_sim {
         LoggingTools::DebugShowImage("full_gray_image1", full_gray_image1);
         LoggingTools::DebugShowImage("full_gray_image2", full_gray_image2);
 
-        // First, get a clean picture of each ball with nothing in the background, both sized the exactly same way 
-        // Resize the images so that the balls are the same radius. 
+        // Use ML spin prediction model if enabled and available
+        if (kSpinModelEnabled) {
+            cv::Vec3d ml_result = PredictSpinWithModel(full_gray_image1, ball1, full_gray_image2, ball2);
+            if (ml_result[0] != 0 || ml_result[1] != 0 || ml_result[2] != 0) {
+                auto spin_detection_end = std::chrono::high_resolution_clock::now();
+                auto spin_ms = std::chrono::duration_cast<std::chrono::milliseconds>(spin_detection_end - spin_detection_start).count();
+                GS_LOG_MSG(info, "ML spin prediction completed in " + std::to_string(spin_ms) + "ms: "
+                    "X=" + std::to_string(ml_result[0]) + " Y=" + std::to_string(ml_result[1]) + " Z=" + std::to_string(ml_result[2]));
+                return ml_result;
+            }
+            GS_LOG_MSG(warning, "ML spin prediction failed, falling back to brute-force rotation search");
+        }
+
+        // First, get a clean picture of each ball with nothing in the background, both sized the exactly same way
+        // Resize the images so that the balls are the same radius.
 
         GolfBall local_ball1 = ball1;
         GolfBall local_ball2 = ball2;
@@ -4777,6 +4828,74 @@ namespace golf_sim {
     }
 #endif // HAS_ONNXRUNTIME
 
+    cv::Vec3d BallImageProc::PredictSpinWithModel(const cv::Mat& gray_image1, const GolfBall& ball1,
+                                                    const cv::Mat& gray_image2, const GolfBall& ball2) {
+        cv::Vec3d zero_result(0.0, 0.0, 0.0);
+
+        // Lazy-initialize the spin detector
+        if (!spin_detector_initialized_.load(std::memory_order_acquire)) {
+            std::lock_guard<std::mutex> lock(spin_detector_mutex_);
+            if (!spin_detector_initialized_.load(std::memory_order_relaxed)) {
+                if (kSpinModelPath.empty()) {
+                    GS_LOG_MSG(warning, "Spin model path not configured");
+                    return zero_result;
+                }
+
+                SpinDetector::Config config;
+                config.param_path = kSpinModelPath + "/best.ncnn.param";
+                config.bin_path = kSpinModelPath + "/best.ncnn.bin";
+                config.crop_size = kSpinCropSize;
+                config.num_threads = kInferenceThreads;
+
+                // Check files exist
+                if (!std::filesystem::exists(config.param_path) ||
+                    !std::filesystem::exists(config.bin_path)) {
+                    GS_LOG_MSG(warning, "Spin model files not found at: " + kSpinModelPath);
+                    return zero_result;
+                }
+
+                spin_detector_ = std::make_unique<SpinDetector>(config);
+                if (!spin_detector_->Initialize()) {
+                    GS_LOG_MSG(warning, "Failed to initialize spin detector");
+                    spin_detector_.reset();
+                    return zero_result;
+                }
+
+                spin_detector_->WarmUp(3);
+                spin_detector_initialized_.store(true, std::memory_order_release);
+                GS_LOG_MSG(info, "Spin prediction model loaded from: " + kSpinModelPath);
+            }
+        }
+
+        if (!spin_detector_) return zero_result;
+
+        // Isolate ball crops from full images
+        GolfBall local_ball1 = ball1;
+        GolfBall local_ball2 = ball2;
+        cv::Mat crop1 = IsolateBall(gray_image1, local_ball1);
+        cv::Mat crop2 = IsolateBall(gray_image2, local_ball2);
+
+        if (crop1.empty() || crop2.empty()) {
+            GS_LOG_MSG(warning, "Failed to isolate ball crops for spin prediction");
+            return zero_result;
+        }
+
+        // Run ML inference
+        SpinDetector::SpinResult result = spin_detector_->Predict(crop1, crop2);
+
+        if (!result.valid) {
+            GS_LOG_MSG(warning, "Spin model inference returned invalid result");
+            return zero_result;
+        }
+
+        GS_LOG_TRACE_MSG(trace, "Spin ML prediction: X=" + std::to_string(result.rotation_x_deg)
+            + " Y=" + std::to_string(result.rotation_y_deg)
+            + " Z=" + std::to_string(result.rotation_z_deg)
+            + " (" + std::to_string(result.inference_ms) + "ms)");
+
+        return cv::Vec3d(result.rotation_x_deg, result.rotation_y_deg, result.rotation_z_deg);
+    }
+
     void BallImageProc::LoadConfigurationValues() {
         GS_LOG_MSG(info, "Loading BallImageProc configuration values from JSON...");
 
@@ -4792,9 +4911,16 @@ namespace golf_sim {
         GolfSimConfiguration::SetConstant("gs_config.ball_identification.kInferenceThreads", kInferenceThreads);
         GolfSimConfiguration::SetConstant("gs_config.ball_identification.kModelDeviceType", kModelDeviceType);
 
+        // Spin prediction model configuration
+        GolfSimConfiguration::SetConstant("gs_config.spin_prediction.kSpinModelPath", kSpinModelPath);
+        GolfSimConfiguration::SetConstant("gs_config.spin_prediction.kSpinModelEnabled", kSpinModelEnabled);
+        GolfSimConfiguration::SetConstant("gs_config.spin_prediction.kSpinCropSize", kSpinCropSize);
+
         GS_LOG_MSG(info, "Model directory: " + kModelPath);
         GS_LOG_MSG(info, "Detection method: " + kStrobedBallDetectionMethod);
         GS_LOG_MSG(info, "Backend: " + kInferenceBackend);
+        GS_LOG_MSG(info, "Spin model: " + std::string(kSpinModelEnabled ? "ENABLED" : "DISABLED")
+            + (kSpinModelEnabled ? " (" + kSpinModelPath + ")" : ""));
 
         // Verify model files exist for the configured backend
         if (kInferenceBackend == "ncnn") {

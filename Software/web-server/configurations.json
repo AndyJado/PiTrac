@@ -609,6 +609,43 @@
       "passedVia": "json",
       "passedTo": "both"
     },
+    "gs_config.spin_prediction.kSpinModelEnabled": {
+      "category": "AI Detection",
+      "subcategory": "basic",
+      "basicSubcategory": "Spin Prediction",
+      "displayName": "ML Spin Prediction",
+      "description": "Use trained neural network for spin detection instead of brute-force rotation search. Much faster (~10ms vs ~800ms) with comparable accuracy.",
+      "type": "boolean",
+      "default": false,
+      "requiresRestart": true,
+      "passedVia": "json",
+      "passedTo": "both"
+    },
+    "gs_config.spin_prediction.kSpinModelPath": {
+      "category": "AI Detection",
+      "displayName": "Spin Model Path",
+      "description": "Directory containing the spin prediction NCNN model files",
+      "type": "string",
+      "default": "../ml_models/spin-predictor",
+      "requiresRestart": true,
+      "passedVia": "json",
+      "passedTo": "both",
+      "internal": true
+    },
+    "gs_config.spin_prediction.kSpinCropSize": {
+      "category": "AI Detection",
+      "displayName": "Spin Model Crop Size",
+      "description": "Input crop size for spin model (must match training)",
+      "type": "number",
+      "min": 32,
+      "max": 256,
+      "step": 32,
+      "default": 64,
+      "requiresRestart": true,
+      "passedVia": "json",
+      "passedTo": "both",
+      "internal": true
+    },
     "gs_config.ball_identification.kImageTypeToProcessWithYOLO": {
       "category": "AI Detection",
       "displayName": "Image Type To Use In YOLO Processing",
@@ -4298,9 +4335,13 @@
         "displayName": "Ball Detection",
         "order": 5
       },
+      "Spin Prediction": {
+        "displayName": "Spin Prediction",
+        "order": 6
+      },
       "Strobing": {
         "displayName": "Strobing",
-        "order": 6
+        "order": 7
       },
       "Storage": {
         "displayName": "Storage",

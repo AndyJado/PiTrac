@@ -33,6 +33,7 @@
 #include "colorsys.h"
 #include "golf_ball.h"
 #include "ncnn_detector.hpp"
+#include "spin_detector.hpp"
 #ifdef HAS_ONNXRUNTIME
 #include "onnx_runtime_detector.hpp"
 #endif
@@ -219,6 +220,11 @@ public:
     static bool kAutoFallback;
     static int kInferenceThreads;
 
+    // Spin prediction model configuration
+    static std::string kSpinModelPath;     // Spin model directory (NCNN format)
+    static bool kSpinModelEnabled;         // Use ML spin prediction vs brute-force search
+    static int kSpinCropSize;              // Input crop size (must match training, default 64)
+
     // This determines which potential 3D angles will be searched for spin processing
     struct RotationSearchSpace {
         int anglex_rotation_degrees_increment = 0;
@@ -397,6 +403,15 @@ private:
     static std::atomic<bool> onnx_detector_initialized_;
     static std::mutex onnx_detector_mutex_;
 #endif
+
+    // Spin prediction model
+    static std::unique_ptr<SpinDetector> spin_detector_;
+    static std::atomic<bool> spin_detector_initialized_;
+    static std::mutex spin_detector_mutex_;
+
+    // ML-based spin prediction — called from GetBallRotation when spin model is enabled
+    static cv::Vec3d PredictSpinWithModel(const cv::Mat& gray_image1, const GolfBall& ball1,
+                                           const cv::Mat& gray_image2, const GolfBall& ball2);
 
     // OpenCV DNN fallback
     static cv::dnn::Net yolo_model_;
