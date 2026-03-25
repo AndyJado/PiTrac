@@ -45,16 +45,14 @@ bool SpinDetector::Initialize() {
 void SpinDetector::PreprocessCrop(const cv::Mat& crop, ncnn::Mat& out) {
     cv::Mat gray;
 
-    // Ensure grayscale
+    // Ensure grayscale — equalization is NOT applied here because
+    // IsolateBall() already equalizes before passing crops to us.
+    // Double-equalizing would mismatch the training data distribution.
     if (crop.channels() == 3) {
         cv::cvtColor(crop, gray, cv::COLOR_BGR2GRAY);
     } else {
-        gray = crop.clone();
+        gray = crop;
     }
-
-    // Match the histogram equalization applied by IsolateBall() and the Python
-    // training pipeline — the model was trained on equalized crops.
-    cv::equalizeHist(gray, gray);
 
     // Resize to expected input size
     cv::Mat resized;
