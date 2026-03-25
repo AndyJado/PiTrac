@@ -4892,8 +4892,25 @@ namespace golf_sim {
             cv::resize(crop1, crop1, cv::Size(crop2.cols, crop2.rows), cv::INTER_LINEAR);
         }
 
-        // Run ML inference
-        SpinDetector::SpinResult result = spin_detector_->Predict(crop1, crop2);
+        // Apply Gabor filtering — the model was trained on Gabor-filtered dimple
+        // edge images, not raw grayscale. This matches the Python training pipeline
+        // which applies apply_gabor_to_crop() + remove_reflections() in dataset.py.
+        cv::Mat gabor1, gabor2;
+        double calibrated_threshold = -1;
+        ApplyGaborFilterToBall(crop1, local_ball1, gabor1, calibrated_threshold, calibrated_threshold);
+        RemoveReflections(crop1, gabor1);
+
+        ApplyGaborFilterToBall(crop2, local_ball2, gabor2, calibrated_threshold, calibrated_threshold);
+        RemoveReflections(crop2, gabor2);
+
+        // Apply final ball masking (92% radius) — matches Python mask_reduction_factor=0.92
+        MaskAreaOutsideBall(gabor1, local_ball1, kFinalBallMaskReductionFactor,
+                            cv::Scalar(kPixelIgnoreValue, kPixelIgnoreValue, kPixelIgnoreValue));
+        MaskAreaOutsideBall(gabor2, local_ball2, kFinalBallMaskReductionFactor,
+                            cv::Scalar(kPixelIgnoreValue, kPixelIgnoreValue, kPixelIgnoreValue));
+
+        // Run ML inference on Gabor-filtered images
+        SpinDetector::SpinResult result = spin_detector_->Predict(gabor1, gabor2);
 
         if (!result.valid) {
             GS_LOG_MSG(warning, "Spin model inference returned invalid result");
