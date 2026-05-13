@@ -836,6 +836,16 @@
       "requiresRestart": true,
       "passedVia": "json"
     },
+    "gs_config.strobing.kCameraRequiresFlushPulse": {
+      "category": "Strobing",
+      "subcategory": "advanced",
+      "displayName": "Camera Requires Flush Pulse",
+      "description": "Send an extra trigger pulse after the shutter pulse to flush the ball-hit frame out of the sensor. Required for some IMX296 boards (e.g. Pi GS) where one trigger only advances the capture FSM. Leave off for InnoMaker — it produces the second frame event natively.",
+      "type": "boolean",
+      "default": false,
+      "requiresRestart": true,
+      "passedVia": "json"
+    },
     "gs_config.logging.kLogIntermediateExposureImagesToFile": {
       "category": "Logging",
       "subcategory": "basic",
