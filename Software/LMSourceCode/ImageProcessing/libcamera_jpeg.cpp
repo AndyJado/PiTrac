@@ -82,6 +82,22 @@ void SetExternalTrigger(bool& flag) {
 			return;
 		}
 	}
+
+	if (!flag && camera_model == gs::CameraHardware::CameraModel::Mira220_Mono) {
+
+		flag = true;
+
+		std::string trigger_mode_command = "$PITRAC_ROOT/ImageProcessing/CameraTools/v4l2_trigger 2 1";
+
+		GS_LOG_TRACE_MSG(trace, "ball_flight_camera_event_loop - Camera 2 trigger_mode_command = " + trigger_mode_command);
+		int command_result = system(trigger_mode_command.c_str());
+
+		if (command_result != 0) {
+			GS_LOG_TRACE_MSG(trace, "system(trigger_mode_command) failed.");
+			return;
+		}
+	}
+
 }
 
 // Run the triggered capture event loop on an already-opened camera.
