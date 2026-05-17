@@ -194,11 +194,9 @@ bool cam2_run_event_loop(LibcameraJpegApp& app, cv::Mat& returnImg, bool send_pr
 		RPiCamApp::Msg msg = app.Wait();
 		if (msg.type == RPiCamApp::MsgType::Timeout)
 		{
-			GS_LOG_MSG(error, "ERROR: Device timeout detected, attempting a restart!!!");
-			app.StopCamera();
-			uint flags = RPiCamApp::FLAG_STILL_RGB;
-			app.ConfigureViewfinder(flags);
-			app.StartCamera();
+			// In external trigger mode, timeouts are expected while waiting
+			// for FSIN pulses. Just ignore and keep waiting for the trigger.
+			GS_LOG_TRACE_MSG(trace, "Device timeout (expected in external trigger mode) — continuing to wait.");
 			continue;
 		}
 
